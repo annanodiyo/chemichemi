@@ -4,18 +4,24 @@ import (
 	"chemichemi/backend/internal/sms"
 	"chemichemi/backend/internal/store"
 	"encoding/json"
+	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+	"embed"
 )
 
 type Application struct {
 	userStore *store.UserStore
 	smsClient *sms.Client
 }
+
+//go:embed ../../frontend/dist
+var embeddedFrontend embed.FS
 
 func main() {
 	userStore, err := store.NewUserStore(usersFilePath())
@@ -35,6 +41,35 @@ func main() {
 	mux.HandleFunc("/healthz", app.handleHealth)
 	mux.HandleFunc("/webhook/sms", app.handleIncomingSMS)
 	mux.HandleFunc("/api/trigger-alert", app.handleTriggerAlert)
+
+	// Serve embedded frontend (SPA) with index fallback for client-side routes
+	if staticFS, err := fs.Sub(embeddedFrontend, "frontend/dist"); err == nil {
+		fileServer := http.FileServer(http.FS(staticFS))
+		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			// Try to open the requested file; if not found, fall back to index.html
+			p := strings.TrimPrefix(r.URL.Path, "/")
+			if p == "" {
+				// root -> serve index
+				r.URL.Path = "/"
+				fileServer.ServeHTTP(w, r)
+				return
+			}
+			if f, err := staticFS.Open(p); err != nil {
+				// fallback to index.html
+				index, _ := staticFS.Open("index.html")
+				defer index.Close()
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				io.Copy(w, index)
+				return
+			} else {
+				f.Close()
+				fileServer.ServeHTTP(w, r)
+				return
+			}
+		})
+	} else {
+		log.Printf("warning: embedded frontend not available: %v", err)
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -66,6 +66,24 @@ make build
 cd frontend && npm run build
 ```
 
+**Deploy (single Docker image)**
+
+This repository now builds the frontend and embeds it into the Go backend binary so the project runs as a single web service.
+
+- Build locally with Docker:
+
+```bash
+docker build -t chemichemi:local .
+docker run -p 8080:8080 -e AT_APIKEY=atsk_xxx... chemichemi:local
+```
+
+- Deploy on Render: `render.yaml` is configured to use the root `Dockerfile`. Import the repo in Render and set the following secrets for the service `chemichemi`:
+	- `AT_APIKEY` (required for real SMS)
+	- `AT_USERNAME` (optional; set to `sandbox` for sandbox testing)
+	- `AFRICASTALKING_SANDBOX_RECIPIENTS` (optional; comma-separated)
+
+The single service will serve the SPA and expose API endpoints at `/api/*`, `/webhook/sms`, and `/healthz`.
+
 **AI / Intelligence integration (how features work together)**
 - The core "AI" prediction is an on-device logistic regression implemented in the frontend at `frontend/src/lib/intelligence.ts`. It runs fully offline in the browser and does not require a remote ML service.
 - The frontend computes risk, water-quality indices and a 72-hour probability prediction using deterministic rules + the on-device classifier. This means the AI features work immediately in the browser and do not conflict with backend behavior.
