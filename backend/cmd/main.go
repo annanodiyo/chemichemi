@@ -20,7 +20,7 @@ type Application struct {
 	smsClient *sms.Client
 }
 
-//go:embed ../../frontend/dist
+//go:embed frontend/dist
 var embeddedFrontend embed.FS
 
 func main() {
