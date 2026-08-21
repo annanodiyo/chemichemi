@@ -10,8 +10,9 @@ RUN npm ci --production=false && npm run build
 # Go build stage
 FROM golang:1.22-alpine AS build
 RUN apk add --no-cache git
+# Copy only go.mod (go.sum may not exist in repo); `go mod download` will populate go.sum
 WORKDIR /src
-COPY go.mod go.sum ./
+COPY go.mod ./
 RUN go mod download
 # Copy entire repo; frontend build output will be copied from the previous stage
 COPY . .
