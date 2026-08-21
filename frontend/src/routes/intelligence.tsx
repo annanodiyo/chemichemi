@@ -21,9 +21,7 @@ function IntelligencePage() {
     setLoading(true);
 
     try {
-      const response = await sendSandboxRiskAlert({
-        data: { location, level, advice },
-      });
+      const response = await sendSandboxRiskAlert({ location, level, advice });
       toast.success(response.message);
       // Reset form
       setLocation("");

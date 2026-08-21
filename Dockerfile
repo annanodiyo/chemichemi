@@ -1,30 +1,38 @@
-# Root Dockerfile: builds frontend and Go backend and produces single minimal image
-
-# Frontend build stage (uses Node)
-FROM node:20-alpine AS frontend-build
+FROM node:22-alpine AS frontend-build
 WORKDIR /src/frontend
-COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/package*.json ./
+RUN npm ci
 COPY frontend/ ./
-RUN npm ci --production=false && npm run build
+RUN npm run build
 
-# Go build stage
-FROM golang:1.22-alpine AS build
+FROM golang:1.25-alpine AS build
 RUN apk add --no-cache git
-# Copy only go.mod (go.sum may not exist in repo); `go mod download` will populate go.sum
 WORKDIR /src
-COPY go.mod ./
-RUN go mod download
-# Copy entire repo; frontend build output will be copied from the previous stage
+COPY go.mod go.sum? ./
+RUN go mod tidy && go mod download
 COPY . .
-COPY --from=frontend-build /src/frontend/dist ./frontend/dist
+COPY --from=frontend-build /src/frontend/dist ./backend/cmd/frontend/dist
 WORKDIR /src/backend/cmd
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o /app/chemichemi
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w" -o /app/chemichemi .
 
-# Final runtime image
 FROM alpine:3.18
 RUN addgroup -S app && adduser -S app -G app
+WORKDIR /app
+
+# Copy the compiled binary
 COPY --from=build /app/chemichemi /usr/local/bin/chemichemi
-EXPOSE 8080
+
+# FIX 1: Recreate the directory structure your Go code expects
+RUN mkdir -p backend
+
+# FIX 2: Copy the users.json file (or an empty JSON template) from the build stage
+COPY --from=build /src/backend/users.json ./backend/users.json
+
+# FIX 3: Ensure the app user has permission to write to this file at runtime
+RUN chown -R app:app /app
+
 ENV PORT=8080
+EXPOSE 8080
 USER app
 ENTRYPOINT ["/usr/local/bin/chemichemi"]

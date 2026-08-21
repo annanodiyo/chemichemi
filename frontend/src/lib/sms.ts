@@ -1,5 +1,3 @@
-import { createServerFn } from "@tanstack/react-start";
-
 const SANDBOX_SMS_URL = "https://api.sandbox.africastalking.com/version1/messaging";
 const MAX_ALERT_LENGTH = 320;
 
@@ -27,34 +25,8 @@ type AfricaTalkingResponse = {
   };
 };
 
-function validateRiskAlert(data: unknown): RiskAlert {
-  if (
-    !data ||
-    typeof data !== "object" ||
-    !("location" in data) ||
-    !("level" in data) ||
-    !("advice" in data) ||
-    typeof (data as RiskAlert).location !== "string" ||
-    typeof (data as RiskAlert).level !== "string" ||
-    typeof (data as RiskAlert).advice !== "string"
-  ) {
-    throw new Error("Invalid SMS alert payload.");
-  }
-
-  const payload = data as RiskAlert;
-
-  return {
-    location: payload.location,
-    level: payload.level,
-    advice: payload.advice,
-    recipients: Array.isArray(payload.recipients)
-      ? payload.recipients.filter((r): r is string => typeof r === "string")
-      : undefined,
-  };
-}
-
 function sandboxRecipients(): string[] {
-  return (process.env["AFRICASTALKING_SANDBOX_RECIPIENTS"] ?? "")
+  return (import.meta.env.VITE_AFRICASTALKING_SANDBOX_RECIPIENTS ?? "")
     .split(",")
     .map((recipient) => recipient.trim())
     .filter(Boolean);
