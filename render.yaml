@@ -5,6 +5,7 @@ services:
     plan: free
     branch: main
     region: oregon
+    dockerfilePath: backend/Dockerfile
     buildCommand: go build -o bin/chemichemi ./backend/cmd
     startCommand: ./bin/chemichemi
     autoDeploy: true
