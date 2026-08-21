@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
@@ -96,7 +95,6 @@ function Dashboard() {
   const [demo, setDemo] = useState(false);
   const [environment, setEnvironment] = useState<EnvironmentalData | null>(null);
   const [sendingAlert, setSendingAlert] = useState(false);
-  const sendAlert = useServerFn(sendSandboxRiskAlert);
 
   const location = useMemo(
     () => kenyanBeaches.find((b) => b.id === locationId) as Location,
@@ -134,8 +132,8 @@ function Dashboard() {
   const onSendSandboxAlert = async () => {
     setSendingAlert(true);
     try {
-      const result = await sendAlert({
-        data: { location: location.name, level: assessment.level, advice: assessment.advice },
+      const result = await sendSandboxRiskAlert({
+        location: location.name, level: assessment.level, advice: assessment.advice,
       });
       toast.success(
         `Sandbox alert sent to ${result.recipients} simulator recipient${result.recipients === 1 ? "" : "s"}.`,
