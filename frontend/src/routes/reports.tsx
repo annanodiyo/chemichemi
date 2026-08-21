@@ -31,11 +31,12 @@ import { cn } from "@/lib/utils";
 import { kenyanBeaches } from "@/lib/chemichemi";
 import {
   addReport,
+  ensureGenesisBlock,
   getChain,
   getReports,
   getVerifiedReports,
   reviewReport,
-  seedIfEmpty,
+  // seedIfEmpty,
   sha256Hex,
   verifyChain,
   type Block,
@@ -45,6 +46,7 @@ import {
   type Severity,
   type VerificationStatus,
 } from "@/lib/ledger";
+import { subscribe } from "@/lib/subscribers";
 
 export const Route = createFileRoute("/reports")({
   head: () => ({
@@ -134,43 +136,55 @@ function ReportsPage() {
   const [reviewer, setReviewer] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [phone, setPhone] = useState("");
 
   const refresh = useCallback(() => {
     setReports(getReports());
     setChain(getChain());
   }, []);
 
-  useEffect(() => {
-    seedIfEmpty().then(() => {
-      refresh();
-      setLoading(false);
-    });
-  }, [refresh]);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reporter.trim() || message.trim().length < 10) {
-      toast.error("Add your name and a description of at least 10 characters.");
-      return;
-    }
-    setSubmitting(true);
-    const report = await addReport({
-      locationId: Number(locationId),
-      reportType,
-      severity,
-      message: message.trim(),
-      evidence: evidence.trim(),
-      attachment,
-      reporter: reporter.trim(),
-    });
+ useEffect(() => {
+  ensureGenesisBlock().then(() => {
     refresh();
-    setMessage("");
-    setEvidence("");
-    setAttachment(undefined);
-    setAttachmentInputKey((key) => key + 1);
-    setSubmitting(false);
-    toast.success(`Report ${report.id} submitted for expert review`);
-  };
+    setLoading(false);
+  });
+}, [refresh]);
+
+const onSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!reporter.trim() || message.trim().length < 10) {
+    toast.error("Add your name and a description of at least 10 characters.");
+    return;
+  }
+  setSubmitting(true);
+  const report = await addReport({
+    locationId: Number(locationId),
+    reportType,
+    severity,
+    message: message.trim(),
+    evidence: evidence.trim(),
+    attachment,
+    reporter: reporter.trim(),
+  });
+
+  if (phone.trim()) {
+    const result = subscribe(phone.trim(), Number(locationId));
+    if (result.success) {
+      toast.success("You're subscribed for SMS alerts at this beach.");
+    } else if (result.error) {
+      toast.error(result.error);
+    }
+    setPhone("");
+  }
+
+  refresh();
+  setMessage("");
+  setEvidence("");
+  setAttachment(undefined);
+  setAttachmentInputKey((key) => key + 1);
+  setSubmitting(false);
+  toast.success(`Report ${report.id} submitted for expert review`);
+};
 
   const onAttachmentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -317,6 +331,18 @@ function ReportsPage() {
                     placeholder="e.g. Peter Otieno"
                   />
                 </div>
+                <div className="grid gap-2">
+  <Label htmlFor="phone">
+    Phone number <span className="font-normal text-muted-foreground">(optional — get SMS alerts for this beach)</span>
+  </Label>
+  <Input
+    id="phone"
+    type="tel"
+    value={phone}
+    onChange={(e) => setPhone(e.target.value)}
+    placeholder="+254712345678"
+  />
+</div>
                 <div className="grid gap-2">
                   <Label htmlFor="type">Report type</Label>
                   <Select
