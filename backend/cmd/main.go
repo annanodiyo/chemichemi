@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"log"
-	"chemichemi/backend/internal/sms"
-	"chemichemi/backend/internal/store"
 	"net/http"
 	"os"
 	"strings"
+
+	"chemichemi/backend/internal/sms"
+	"chemichemi/backend/internal/store"
 )
 
 type Application struct {
