@@ -58,6 +58,7 @@ func (s *UserStore) save() error {
 		return err
 	}
 	return os.WriteFile(s.filePath, data, 0644)
+	return os.WriteFile(s.filePath, data, 0o644)
 }
 
 func (s *UserStore) RegisterOrUpdate(phone, name string) error {
