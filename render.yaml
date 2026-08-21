@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: chemichemi-backend
+    env: go
+    plan: free
+    branch: main
+    region: oregon
+    buildCommand: go build -o bin/chemichemi ./backend/cmd
+    startCommand: ./bin/chemichemi
+    autoDeploy: true
+    envVars:
+      - key: AT_APIKEY
+        value: "" # Set this secret in Render dashboard
+      - key: AT_USERNAME
+        value: "" # optional (e.g. 'sandbox')
+      - key: USERS_FILE
+        value: backend/users.json
+      - key: PORT
+        value: "8080"
+
+  - type: static_site
+    name: chemichemi-frontend
+    branch: main
+    plan: free
+    region: oregon
+    buildCommand: |
+      cd frontend
+      npm ci
+      npm run build
+    publishPath: frontend/dist
+    autoDeploy: true
+    envVars:
+      - key: AFRICASTALKING_SANDBOX_RECIPIENTS
+        value: "" # Optional: comma-separated sandbox recipient phone numbers
+
+# Notes:
+# - Do not store real API keys in this file. Set `AT_APIKEY` and other secrets
+#   in the Render dashboard (Environment > Secrets) for the `chemichemi-backend`
+#   service. The values above are intentionally left blank.
+# - Adjust `branch`, `region` and `plan` as needed for your account.
