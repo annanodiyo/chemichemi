@@ -4,7 +4,6 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
-# Clean install dependencies first for better caching
 RUN npm ci
 COPY frontend/ ./
 RUN npm run build
@@ -14,19 +13,18 @@ FROM golang:1.22-alpine AS build
 RUN apk add --no-cache git
 WORKDIR /src
 
-# FIX 1: Copy go.mod AND go.sum (using wildcard ? makes go.sum optional if it doesn't exist)
+# Copy go.mod AND go.sum (using wildcard ? makes go.sum optional if it doesn't exist)
 COPY go.mod go.sum? ./
-
-# FIX 2: Tidy the modules to generate/verify go.sum before downloading
 RUN go mod tidy && go mod download
 
-# Copy entire repo; frontend build output will be copied from the previous stage
+# Copy entire repo
 COPY . .
+# FIX 1: Copy the frontend assets to /src/frontend/dist so the root folder mirrors your local setup
 COPY --from=frontend-build /src/frontend/dist ./frontend/dist
 
-# FIX 3: Run the build from the directory containing your main package
-WORKDIR /src/backend/cmd
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /app/chemichemi
+# FIX 2: Stay in the root directory (/src) and point go build to the package path.
+# This keeps the root-relative pathing correct for //go:embed.
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /app/chemichemi ./backend/cmd
 
 # Final runtime image
 FROM alpine:3.18
