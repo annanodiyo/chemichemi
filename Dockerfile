@@ -4,21 +4,29 @@
 FROM node:20-alpine AS frontend-build
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
+# Clean install dependencies first for better caching
+RUN npm ci
 COPY frontend/ ./
-RUN npm ci --production=false && npm run build
+RUN npm run build
 
 # Go build stage
 FROM golang:1.22-alpine AS build
 RUN apk add --no-cache git
-# Copy only go.mod (go.sum may not exist in repo); `go mod download` will populate go.sum
 WORKDIR /src
-COPY go.mod ./
-RUN go mod download
+
+# FIX 1: Copy go.mod AND go.sum (using wildcard ? makes go.sum optional if it doesn't exist)
+COPY go.mod go.sum? ./
+
+# FIX 2: Tidy the modules to generate/verify go.sum before downloading
+RUN go mod tidy && go mod download
+
 # Copy entire repo; frontend build output will be copied from the previous stage
 COPY . .
 COPY --from=frontend-build /src/frontend/dist ./frontend/dist
+
+# FIX 3: Run the build from the directory containing your main package
 WORKDIR /src/backend/cmd
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -o /app/chemichemi
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /app/chemichemi
 
 # Final runtime image
 FROM alpine:3.18
