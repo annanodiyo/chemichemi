@@ -25,16 +25,19 @@ COPY go.mod ./
 COPY go.sum* ./
 RUN go mod download
 
+# 1. Copy backend source code first
 COPY . .
 
-# Copy frontend build output directly into backend/cmd/frontend/dist
-COPY --from=frontend-build /src/frontend/dist ./backend/cmd/frontend/dist
+# 2. Explicitly remove any stale target directory from the host copy
+RUN rm -rf /src/backend/cmd/frontend/dist
 
-WORKDIR /src/backend/cmd
+# 3. Copy dist using absolute paths to avoid relative WORKDIR ambiguity
+COPY --from=frontend-build /src/frontend/dist /src/backend/cmd/frontend/dist
 
+# 4. Build directly from /src without changing WORKDIR to /src/backend/cmd
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w" \
-    -o /app/chemichemi main.go
+    -o /app/chemichemi ./backend/cmd
 
 
 # =========================
