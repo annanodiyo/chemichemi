@@ -2,6 +2,14 @@ export type ReportType = "pollution" | "fish_health";
 export type Severity = "low" | "moderate" | "high" | "critical";
 export type VerificationStatus = "pending" | "verified" | "rejected";
 
+export interface EvidenceAttachment {
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string;
+  hash: string;
+}
+
 export interface CommunityReport {
   id: string;
   locationId: number;
@@ -9,6 +17,7 @@ export interface CommunityReport {
   severity: Severity;
   message: string;
   evidence: string;
+  attachment?: EvidenceAttachment;
   reporter: string;
   createdAt: string;
   dataHash: string;
@@ -64,6 +73,7 @@ function fingerprint(
     severity: Severity;
     message: string;
     evidence: string;
+    attachment?: Pick<EvidenceAttachment, "name" | "type" | "size" | "hash">;
     reporter: string;
     createdAt: string;
   },
@@ -98,12 +108,27 @@ export async function addReport(input: {
   severity: Severity;
   message: string;
   evidence: string;
+  attachment?: EvidenceAttachment;
   reporter: string;
   createdAt?: string;
 }): Promise<CommunityReport> {
   const id = `RPT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
   const createdAt = input.createdAt ?? new Date().toISOString();
-  const dataHash = await sha256Hex(fingerprint({ ...input, createdAt }, id));
+  const dataHash = await sha256Hex(
+    fingerprint(
+      {
+        ...input,
+        attachment: input.attachment && {
+          name: input.attachment.name,
+          type: input.attachment.type,
+          size: input.attachment.size,
+          hash: input.attachment.hash,
+        },
+        createdAt,
+      },
+      id,
+    ),
+  );
   const report: CommunityReport = {
     ...input,
     id,

@@ -36,9 +36,11 @@ import {
   getVerifiedReports,
   reviewReport,
   seedIfEmpty,
+  sha256Hex,
   verifyChain,
   type Block,
   type CommunityReport,
+  type EvidenceAttachment,
   type ReportType,
   type Severity,
   type VerificationStatus,
@@ -127,6 +129,8 @@ function ReportsPage() {
   const [reporter, setReporter] = useState("");
   const [message, setMessage] = useState("");
   const [evidence, setEvidence] = useState("");
+  const [attachment, setAttachment] = useState<EvidenceAttachment>();
+  const [attachmentInputKey, setAttachmentInputKey] = useState(0);
   const [reviewer, setReviewer] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -156,13 +160,39 @@ function ReportsPage() {
       severity,
       message: message.trim(),
       evidence: evidence.trim(),
+      attachment,
       reporter: reporter.trim(),
     });
     refresh();
     setMessage("");
     setEvidence("");
+    setAttachment(undefined);
+    setAttachmentInputKey((key) => key + 1);
     setSubmitting(false);
     toast.success(`Report ${report.id} submitted for expert review`);
+  };
+
+  const onAttachmentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      event.target.value = "";
+      toast.error("Attachments must be 2 MB or smaller.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      if (typeof reader.result !== "string") return;
+      setAttachment({
+        name: file.name,
+        type: file.type || "application/octet-stream",
+        size: file.size,
+        dataUrl: reader.result,
+        hash: await sha256Hex(reader.result),
+      });
+    };
+    reader.onerror = () => toast.error("The attachment could not be read.");
+    reader.readAsDataURL(file);
   };
 
   const onReview = async (
@@ -338,6 +368,23 @@ function ReportsPage() {
                     onChange={(e) => setEvidence(e.target.value)}
                     placeholder="Describe photos, samples, witness statements, or a field-check reference."
                   />
+                  <Input
+                    key={attachmentInputKey}
+                    id="evidence-attachment"
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={onAttachmentChange}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Attach one photo or PDF (maximum 2 MB). It is saved with the
+                    pending report and fingerprinted before review.
+                  </p>
+                  {attachment && (
+                    <p className="text-xs font-medium text-primary">
+                      Attached: {attachment.name} (
+                      {Math.ceil(attachment.size / 1024)} KB)
+                    </p>
+                  )}
                 </div>
                 <div className="sm:col-span-2">
                   <Button type="submit" disabled={submitting}>
@@ -408,6 +455,15 @@ function ReportsPage() {
                       <strong>Evidence:</strong>{" "}
                       {report.evidence || "No supporting evidence supplied."}
                     </p>
+                    {report.attachment && (
+                      <a
+                        className="mt-2 inline-flex text-xs font-semibold text-primary underline-offset-4 hover:underline"
+                        href={report.attachment.dataUrl}
+                        download={report.attachment.name}
+                      >
+                        Open attachment: {report.attachment.name}
+                      </a>
+                    )}
                     <div className="mt-3 flex gap-2">
                       <Button
                         size="sm"

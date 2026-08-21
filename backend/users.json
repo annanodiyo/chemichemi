@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Victor Ouma",
+    "phone": "+254799619641",
+    "active": true
+  },
+  {
+    "name": "Amina Hassan",
+    "phone": "+254722111222",
+    "active": true
+  },
+  {
+    "name": "David Kiprop",
+    "phone": "+254733333444",
+    "active": true
+  },
+  {
+    "name": "Grace Wanjiku",
+    "phone": "+254744555666",
+    "active": true
+  },
+  {
+    "name": "Brian Otieno",
+    "phone": "+254755777888",
+    "active": true
+  }
+]
