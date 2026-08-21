@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Raw/downloaded data
+backend/data/raw/
+backend/data/
+data/raw/
+
+# Satellite / remote sensing data
+*.xml
+*.safe/
+*.SAFE/
+*.zip
+*.tar
+*.tar.gz
+*.nc
+*.h5
+*.hdf
+*.tif
+*.tiff
+
+# Pipeline/cache files
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
