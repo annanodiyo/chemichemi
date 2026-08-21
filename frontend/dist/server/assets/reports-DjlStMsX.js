@@ -1,13 +1,13 @@
 import { a as cn, i as CardTitle, n as CardContent, r as CardHeader, t as Card } from "./card-BU7ReKAs.js";
 import { a as kenyanBeaches, c as severityStyles, l as Button } from "./chemichemi-BI2ouwi6.js";
 import { i as SelectItem, n as SelectContent, o as SelectTrigger, s as SelectValue, t as Select } from "./select-CfPBqr_b.js";
-import { a as verifyChain, i as seedIfEmpty, n as getChain, r as getReports, t as addReport } from "./ledger-COV7HuWn.js";
+import { a as reviewReport, i as getVerifiedReports, n as getChain, o as seedIfEmpty, r as getReports, s as verifyChain, t as addReport } from "./ledger-DhXEZnPJ.js";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { jsx, jsxs } from "react/jsx-runtime";
 import { toast } from "sonner";
-import { ArrowLeft, BadgeCheck, Boxes, Droplets, Fish, Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
+import { ArrowLeft, BadgeCheck, BadgeX, Boxes, Droplets, Fish, Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
 import { cva } from "class-variance-authority";
 import * as LabelPrimitive from "@radix-ui/react-label";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
@@ -114,7 +114,7 @@ function ReportCard({ report }) {
 						]
 					}), /* @__PURE__ */ jsxs("span", {
 						className: "inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-1 text-[11px] font-bold text-safe",
-						children: [/* @__PURE__ */ jsx(BadgeCheck, { className: "size-3.5" }), "Ledger verified"]
+						children: [/* @__PURE__ */ jsx(BadgeCheck, { className: "size-3.5" }), "Expert verified · Ledgered"]
 					})]
 				})
 			]
@@ -131,6 +131,10 @@ function ReportsPage() {
 	const [severity, setSeverity] = useState("moderate");
 	const [reporter, setReporter] = useState("");
 	const [message, setMessage] = useState("");
+	const [evidence, setEvidence] = useState("");
+	const [reviewer, setReviewer] = useState("");
+	const [reviewNotes, setReviewNotes] = useState("");
+	const [reviewingId, setReviewingId] = useState(null);
 	const refresh = useCallback(() => {
 		setReports(getReports());
 		setChain(getChain());
@@ -153,12 +157,36 @@ function ReportsPage() {
 			reportType,
 			severity,
 			message: message.trim(),
+			evidence: evidence.trim(),
 			reporter: reporter.trim()
 		});
 		refresh();
 		setMessage("");
+		setEvidence("");
 		setSubmitting(false);
-		toast.success(`Report ${report.id} added to the ledger`);
+		toast.success(`Report ${report.id} submitted for expert review`);
+	};
+	const onReview = async (reportId, status) => {
+		if (!reviewer.trim() || reviewNotes.trim().length < 10) {
+			toast.error("Add the expert name and at least 10 characters of review notes.");
+			return;
+		}
+		setReviewingId(reportId);
+		try {
+			await reviewReport({
+				reportId,
+				status,
+				reviewer: reviewer.trim(),
+				notes: reviewNotes.trim()
+			});
+			refresh();
+			setReviewNotes("");
+			toast.success(status === "verified" ? "Report verified and appended to the ledger." : "Report rejected and kept off the ledger.");
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : "Unable to review the report.");
+		} finally {
+			setReviewingId(null);
+		}
 	};
 	const onVerify = async () => {
 		const result = await verifyChain();
@@ -185,7 +213,7 @@ function ReportsPage() {
 					children: "Community reports"
 				}), /* @__PURE__ */ jsx("p", {
 					className: "mt-2 max-w-xl text-sm text-muted-foreground",
-					children: "Every observation from the beaches is hashed and chained, so records of pollution and fish kills cannot be quietly edited later."
+					children: "Reports are held for expert review. Only evidence-confirmed reports are hashed into the tamper-evident ledger."
 				})] }), /* @__PURE__ */ jsxs(Button, {
 					variant: "outline",
 					size: "sm",
@@ -207,6 +235,10 @@ function ReportsPage() {
 							children: "Submit report"
 						}),
 						/* @__PURE__ */ jsx(TabsTrigger, {
+							value: "review",
+							children: "Expert review"
+						}),
+						/* @__PURE__ */ jsx(TabsTrigger, {
 							value: "ledger",
 							children: "Ledger"
 						})
@@ -217,10 +249,10 @@ function ReportsPage() {
 						children: loading ? /* @__PURE__ */ jsx("div", {
 							className: "flex justify-center py-16",
 							children: /* @__PURE__ */ jsx(Loader2, { className: "size-6 animate-spin text-primary" })
-						}) : reports.length === 0 ? /* @__PURE__ */ jsx("p", {
+						}) : getVerifiedReports().length === 0 ? /* @__PURE__ */ jsx("p", {
 							className: "py-12 text-center text-sm text-muted-foreground",
 							children: "No reports yet."
-						}) : reports.map((r) => /* @__PURE__ */ jsx(ReportCard, { report: r }, r.id))
+						}) : getVerifiedReports().map((r) => /* @__PURE__ */ jsx(ReportCard, { report: r }, r.id))
 					}),
 					/* @__PURE__ */ jsx(TabsContent, {
 						value: "new",
@@ -331,17 +363,118 @@ function ReportsPage() {
 											placeholder: "Fish surfacing and gasping at dawn, water very green near the cages…"
 										})]
 									}),
+									/* @__PURE__ */ jsxs("div", {
+										className: "grid gap-2 sm:col-span-2",
+										children: [/* @__PURE__ */ jsx(Label, {
+											htmlFor: "evidence",
+											children: "Supporting evidence"
+										}), /* @__PURE__ */ jsx(Textarea, {
+											id: "evidence",
+											rows: 3,
+											value: evidence,
+											onChange: (e) => setEvidence(e.target.value),
+											placeholder: "Describe photos, samples, witness statements, or a field-check reference."
+										})]
+									}),
 									/* @__PURE__ */ jsx("div", {
 										className: "sm:col-span-2",
 										children: /* @__PURE__ */ jsxs(Button, {
 											type: "submit",
 											disabled: submitting,
-											children: [submitting ? /* @__PURE__ */ jsx(Loader2, { className: "size-4 animate-spin" }) : /* @__PURE__ */ jsx(ShieldCheck, { className: "size-4" }), "Submit to ledger"]
+											children: [submitting ? /* @__PURE__ */ jsx(Loader2, { className: "size-4 animate-spin" }) : /* @__PURE__ */ jsx(ShieldCheck, { className: "size-4" }), "Submit for expert review"]
 										})
 									})
 								]
 							}) })]
 						})
+					}),
+					/* @__PURE__ */ jsxs(TabsContent, {
+						value: "review",
+						className: "mt-6 space-y-4",
+						children: [/* @__PURE__ */ jsxs(Card, {
+							className: "surface-card",
+							children: [/* @__PURE__ */ jsx(CardHeader, { children: /* @__PURE__ */ jsxs(CardTitle, {
+								className: "flex items-center gap-2 text-base",
+								children: [/* @__PURE__ */ jsx(ShieldCheck, { className: "size-4 text-primary" }), "Expert verification queue"]
+							}) }), /* @__PURE__ */ jsxs(CardContent, {
+								className: "grid gap-3 sm:grid-cols-2",
+								children: [/* @__PURE__ */ jsxs("div", {
+									className: "grid gap-2",
+									children: [/* @__PURE__ */ jsx(Label, {
+										htmlFor: "reviewer",
+										children: "Expert name"
+									}), /* @__PURE__ */ jsx(Input, {
+										id: "reviewer",
+										value: reviewer,
+										onChange: (e) => setReviewer(e.target.value),
+										placeholder: "e.g. Dr. Amina Otieno"
+									})]
+								}), /* @__PURE__ */ jsxs("div", {
+									className: "grid gap-2",
+									children: [/* @__PURE__ */ jsx(Label, {
+										htmlFor: "review-notes",
+										children: "Verification notes"
+									}), /* @__PURE__ */ jsx(Textarea, {
+										id: "review-notes",
+										rows: 2,
+										value: reviewNotes,
+										onChange: (e) => setReviewNotes(e.target.value),
+										placeholder: "Evidence checked and claim confirmed…"
+									})]
+								})]
+							})]
+						}), reports.filter((report) => report.verificationStatus === "pending").length === 0 ? /* @__PURE__ */ jsx("p", {
+							className: "py-8 text-center text-sm text-muted-foreground",
+							children: "No reports awaiting expert review."
+						}) : reports.filter((report) => report.verificationStatus === "pending").map((report) => /* @__PURE__ */ jsx(Card, {
+							className: "surface-card",
+							children: /* @__PURE__ */ jsxs(CardContent, {
+								className: "pt-6",
+								children: [
+									/* @__PURE__ */ jsxs("div", {
+										className: "flex flex-wrap items-center justify-between gap-2",
+										children: [/* @__PURE__ */ jsxs("span", {
+											className: "font-semibold",
+											children: [
+												report.id,
+												" · ",
+												beachName(report.locationId)
+											]
+										}), /* @__PURE__ */ jsx("span", {
+											className: "rounded-full bg-caution/15 px-2 py-1 text-xs font-bold text-caution",
+											children: "Awaiting review"
+										})]
+									}),
+									/* @__PURE__ */ jsx("p", {
+										className: "mt-3 text-sm",
+										children: report.message
+									}),
+									/* @__PURE__ */ jsxs("p", {
+										className: "mt-2 rounded-lg bg-secondary/50 p-3 text-xs text-muted-foreground",
+										children: [
+											/* @__PURE__ */ jsx("strong", { children: "Evidence:" }),
+											" ",
+											report.evidence || "No supporting evidence supplied."
+										]
+									}),
+									/* @__PURE__ */ jsxs("div", {
+										className: "mt-3 flex gap-2",
+										children: [/* @__PURE__ */ jsxs(Button, {
+											size: "sm",
+											disabled: reviewingId === report.id,
+											onClick: () => onReview(report.id, "verified"),
+											children: [reviewingId === report.id ? /* @__PURE__ */ jsx(Loader2, { className: "size-4 animate-spin" }) : /* @__PURE__ */ jsx(BadgeCheck, { className: "size-4" }), "Verify & ledger"]
+										}), /* @__PURE__ */ jsxs(Button, {
+											size: "sm",
+											variant: "outline",
+											disabled: reviewingId === report.id,
+											onClick: () => onReview(report.id, "rejected"),
+											children: [/* @__PURE__ */ jsx(BadgeX, { className: "size-4" }), "Reject"]
+										})]
+									})
+								]
+							})
+						}, report.id))]
 					}),
 					/* @__PURE__ */ jsx(TabsContent, {
 						value: "ledger",

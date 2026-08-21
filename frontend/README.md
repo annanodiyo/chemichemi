@@ -13,4 +13,12 @@ npm run dev
 
 ## Africa's Talking Sandbox alerts
 
-Copy `.env.example` to `.env`, then add an API key generated in the Africa's Talking Sandbox dashboard and the phone numbers registered in its simulator. The dashboard's **Send sandbox alert** button sends the current beach risk assessment to those simulator numbers. Sandbox messages do not reach real farmer handsets.
+Copy `.env.example` to `.env`, then add an API key generated in the Africa's Talking Sandbox dashboard and the phone numbers registered in its simulator. 
+
+```sh
+AFRICASTALKING_SANDBOX_API_KEY=atsk_8d6fe6ef759374d84c3f51e735b4cd2201ff20416d7b1a6d5b9f15115aeb1b054e7e2dac
+# Add one or more numbers registered in Africa's Talking Sandbox, comma-separated.
+AFRICASTALKING_SANDBOX_RECIPIENTS=+254707172370
+
+```
+The dashboard's **Send sandbox alert** button sends the current beach risk assessment to those simulator numbers. Sandbox messages do not reach real farmer handsets.

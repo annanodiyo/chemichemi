@@ -1,4 +1,4 @@
-import { t as getServerFnById } from "./__23tanstack-start-server-fn-resolver-BKc7Jgjx.js";
+import { t as getServerFnById } from "./__23tanstack-start-server-fn-resolver-DU5If3BL.js";
 import { d as TSS_SERVER_FUNCTION, t as createServerFn } from "./createServerFn-CIHAFgYl.js";
 import { a as cn, i as CardTitle, n as CardContent, r as CardHeader, t as Card } from "./card-BU7ReKAs.js";
 import { a as kenyanBeaches, c as severityStyles, i as getForecast, l as Button, n as assessRisk, o as RiskGauge, r as generateWeather, s as RiskPill, t as DEMO_WEATHER } from "./chemichemi-BI2ouwi6.js";

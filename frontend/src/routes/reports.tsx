@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, BadgeCheck, Boxes, Droplets, Fish, Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  BadgeX,
+  Boxes,
+  Droplets,
+  Fish,
+  Loader2,
+  ShieldCheck,
+  TriangleAlert,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +18,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { severityStyles } from "@/components/risk";
 import { cn } from "@/lib/utils";
@@ -17,12 +33,15 @@ import {
   addReport,
   getChain,
   getReports,
+  getVerifiedReports,
+  reviewReport,
   seedIfEmpty,
   verifyChain,
   type Block,
   type CommunityReport,
   type ReportType,
   type Severity,
+  type VerificationStatus,
 } from "@/lib/ledger";
 
 export const Route = createFileRoute("/reports")({
@@ -37,7 +56,8 @@ export const Route = createFileRoute("/reports")({
       { property: "og:title", content: "Community Reports — Chemichemi" },
       {
         property: "og:description",
-        content: "Verified community observations of fish health and pollution across Kenyan Lake Victoria beaches.",
+        content:
+          "Verified community observations of fish health and pollution across Kenyan Lake Victoria beaches.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -46,7 +66,8 @@ export const Route = createFileRoute("/reports")({
   component: ReportsPage,
 });
 
-const beachName = (id: number) => kenyanBeaches.find((b) => b.id === id)?.name ?? "Unknown beach";
+const beachName = (id: number) =>
+  kenyanBeaches.find((b) => b.id === id)?.name ?? "Unknown beach";
 
 function ReportCard({ report }: { report: CommunityReport }) {
   const Icon = report.reportType === "fish_health" ? Fish : Droplets;
@@ -71,7 +92,12 @@ function ReportCard({ report }: { report: CommunityReport }) {
             </span>
           </div>
           <span className="text-xs text-muted-foreground">
-            {new Date(report.createdAt).toLocaleDateString("en-KE", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+            {new Date(report.createdAt).toLocaleDateString("en-KE", {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+            })}
           </span>
         </div>
         <p className="mt-3 text-sm leading-relaxed">{report.message}</p>
@@ -81,7 +107,7 @@ function ReportCard({ report }: { report: CommunityReport }) {
           </span>
           <span className="inline-flex items-center gap-1 rounded-full bg-safe/15 px-2 py-1 text-[11px] font-bold text-safe">
             <BadgeCheck className="size-3.5" />
-            Ledger verified
+            Expert verified · Ledgered
           </span>
         </div>
       </CardContent>
@@ -100,6 +126,10 @@ function ReportsPage() {
   const [severity, setSeverity] = useState<Severity>("moderate");
   const [reporter, setReporter] = useState("");
   const [message, setMessage] = useState("");
+  const [evidence, setEvidence] = useState("");
+  const [reviewer, setReviewer] = useState("");
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setReports(getReports());
@@ -125,17 +155,54 @@ function ReportsPage() {
       reportType,
       severity,
       message: message.trim(),
+      evidence: evidence.trim(),
       reporter: reporter.trim(),
     });
     refresh();
     setMessage("");
+    setEvidence("");
     setSubmitting(false);
-    toast.success(`Report ${report.id} added to the ledger`);
+    toast.success(`Report ${report.id} submitted for expert review`);
+  };
+
+  const onReview = async (
+    reportId: string,
+    status: Exclude<VerificationStatus, "pending">,
+  ) => {
+    if (!reviewer.trim() || reviewNotes.trim().length < 10) {
+      toast.error(
+        "Add the expert name and at least 10 characters of review notes.",
+      );
+      return;
+    }
+    setReviewingId(reportId);
+    try {
+      await reviewReport({
+        reportId,
+        status,
+        reviewer: reviewer.trim(),
+        notes: reviewNotes.trim(),
+      });
+      refresh();
+      setReviewNotes("");
+      toast.success(
+        status === "verified"
+          ? "Report verified and appended to the ledger."
+          : "Report rejected and kept off the ledger.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to review the report.",
+      );
+    } finally {
+      setReviewingId(null);
+    }
   };
 
   const onVerify = async () => {
     const result = await verifyChain();
-    if (result.valid) toast.success(`Ledger intact — ${result.blocks} blocks verified`);
+    if (result.valid)
+      toast.success(`Ledger intact — ${result.blocks} blocks verified`);
     else toast.error(`Ledger broken at block ${result.brokenAt}`);
   };
 
@@ -152,8 +219,8 @@ function ReportsPage() {
         <div>
           <h1 className="font-display text-3xl font-bold">Community reports</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Every observation from the beaches is hashed and chained, so records of pollution and fish kills cannot be
-            quietly edited later.
+            Reports are held for expert review. Only evidence-confirmed reports
+            are hashed into the tamper-evident ledger.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={onVerify}>
@@ -166,6 +233,7 @@ function ReportsPage() {
         <TabsList>
           <TabsTrigger value="feed">Feed</TabsTrigger>
           <TabsTrigger value="new">Submit report</TabsTrigger>
+          <TabsTrigger value="review">Expert review</TabsTrigger>
           <TabsTrigger value="ledger">Ledger</TabsTrigger>
         </TabsList>
 
@@ -174,10 +242,14 @@ function ReportsPage() {
             <div className="flex justify-center py-16">
               <Loader2 className="size-6 animate-spin text-primary" />
             </div>
-          ) : reports.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">No reports yet.</p>
+          ) : getVerifiedReports().length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              No reports yet.
+            </p>
           ) : (
-            reports.map((r) => <ReportCard key={r.id} report={r} />)
+            getVerifiedReports().map((r) => (
+              <ReportCard key={r.id} report={r} />
+            ))
           )}
         </TabsContent>
 
@@ -208,11 +280,19 @@ function ReportsPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="reporter">Your name</Label>
-                  <Input id="reporter" value={reporter} onChange={(e) => setReporter(e.target.value)} placeholder="e.g. Peter Otieno" />
+                  <Input
+                    id="reporter"
+                    value={reporter}
+                    onChange={(e) => setReporter(e.target.value)}
+                    placeholder="e.g. Peter Otieno"
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="type">Report type</Label>
-                  <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
+                  <Select
+                    value={reportType}
+                    onValueChange={(v) => setReportType(v as ReportType)}
+                  >
                     <SelectTrigger id="type">
                       <SelectValue />
                     </SelectTrigger>
@@ -224,7 +304,10 @@ function ReportsPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="severity">Severity</Label>
-                  <Select value={severity} onValueChange={(v) => setSeverity(v as Severity)}>
+                  <Select
+                    value={severity}
+                    onValueChange={(v) => setSeverity(v as Severity)}
+                  >
                     <SelectTrigger id="severity">
                       <SelectValue />
                     </SelectTrigger>
@@ -246,15 +329,112 @@ function ReportsPage() {
                     placeholder="Fish surfacing and gasping at dawn, water very green near the cages…"
                   />
                 </div>
+                <div className="grid gap-2 sm:col-span-2">
+                  <Label htmlFor="evidence">Supporting evidence</Label>
+                  <Textarea
+                    id="evidence"
+                    rows={3}
+                    value={evidence}
+                    onChange={(e) => setEvidence(e.target.value)}
+                    placeholder="Describe photos, samples, witness statements, or a field-check reference."
+                  />
+                </div>
                 <div className="sm:col-span-2">
                   <Button type="submit" disabled={submitting}>
-                    {submitting ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-                    Submit to ledger
+                    {submitting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="size-4" />
+                    )}
+                    Submit for expert review
                   </Button>
                 </div>
               </form>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="review" className="mt-6 space-y-4">
+          <Card className="surface-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ShieldCheck className="size-4 text-primary" />
+                Expert verification queue
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="reviewer">Expert name</Label>
+                <Input
+                  id="reviewer"
+                  value={reviewer}
+                  onChange={(e) => setReviewer(e.target.value)}
+                  placeholder="e.g. Dr. Amina Otieno"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="review-notes">Verification notes</Label>
+                <Textarea
+                  id="review-notes"
+                  rows={2}
+                  value={reviewNotes}
+                  onChange={(e) => setReviewNotes(e.target.value)}
+                  placeholder="Evidence checked and claim confirmed…"
+                />
+              </div>
+            </CardContent>
+          </Card>
+          {reports.filter((report) => report.verificationStatus === "pending")
+            .length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No reports awaiting expert review.
+            </p>
+          ) : (
+            reports
+              .filter((report) => report.verificationStatus === "pending")
+              .map((report) => (
+                <Card key={report.id} className="surface-card">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold">
+                        {report.id} · {beachName(report.locationId)}
+                      </span>
+                      <span className="rounded-full bg-caution/15 px-2 py-1 text-xs font-bold text-caution">
+                        Awaiting review
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm">{report.message}</p>
+                    <p className="mt-2 rounded-lg bg-secondary/50 p-3 text-xs text-muted-foreground">
+                      <strong>Evidence:</strong>{" "}
+                      {report.evidence || "No supporting evidence supplied."}
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        size="sm"
+                        disabled={reviewingId === report.id}
+                        onClick={() => onReview(report.id, "verified")}
+                      >
+                        {reviewingId === report.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <BadgeCheck className="size-4" />
+                        )}
+                        Verify & ledger
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={reviewingId === report.id}
+                        onClick={() => onReview(report.id, "rejected")}
+                      >
+                        <BadgeX className="size-4" />
+                        Reject
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+          )}
         </TabsContent>
 
         <TabsContent value="ledger" className="mt-6">
@@ -270,12 +450,21 @@ function ReportsPage() {
                 .slice()
                 .reverse()
                 .map((b) => (
-                  <div key={b.index} className="rounded-xl border border-border bg-secondary/30 p-3 font-mono text-xs">
+                  <div
+                    key={b.index}
+                    className="rounded-xl border border-border bg-secondary/30 p-3 font-mono text-xs"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-sans font-semibold">Block #{b.index}</span>
-                      <span className="font-sans text-muted-foreground">{b.reportId}</span>
+                      <span className="font-sans font-semibold">
+                        Block #{b.index}
+                      </span>
+                      <span className="font-sans text-muted-foreground">
+                        {b.reportId}
+                      </span>
                     </div>
-                    <p className="mt-2 truncate text-muted-foreground">prev: {b.prevHash}</p>
+                    <p className="mt-2 truncate text-muted-foreground">
+                      prev: {b.prevHash}
+                    </p>
                     <p className="truncate text-primary">hash: {b.hash}</p>
                   </div>
                 ))}

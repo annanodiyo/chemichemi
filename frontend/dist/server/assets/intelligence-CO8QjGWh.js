@@ -1,7 +1,7 @@
 import { a as cn, i as CardTitle, n as CardContent, r as CardHeader, t as Card } from "./card-BU7ReKAs.js";
 import { t as SiteNav } from "./site-nav-Bx-U9TUC.js";
 import { a as kenyanBeaches, l as Button, n as assessRisk, r as generateWeather, s as RiskPill } from "./chemichemi-BI2ouwi6.js";
-import { i as seedIfEmpty, r as getReports } from "./ledger-COV7HuWn.js";
+import { o as seedIfEmpty, r as getReports } from "./ledger-DhXEZnPJ.js";
 import * as React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
@@ -182,7 +182,7 @@ function reportPressureFor(locationId, reports) {
 		high: 1,
 		critical: 1.6
 	};
-	return reports.filter((r) => r.locationId === locationId && new Date(r.createdAt).getTime() >= cutoff).reduce((a, r) => a + weight[r.severity], 0);
+	return reports.filter((r) => r.verificationStatus === "verified" && r.locationId === locationId && new Date(r.createdAt).getTime() >= cutoff).reduce((a, r) => a + weight[r.severity], 0);
 }
 function buildIntel(reports = getReports()) {
 	return kenyanBeaches.map((location) => {
@@ -196,7 +196,7 @@ function buildIntel(reports = getReports()) {
 			score: assessment.score,
 			quality: waterQuality(weather, location, pressure),
 			prediction: predictEvent(location, pressure),
-			reports: reports.filter((r) => r.locationId === location.id).length
+			reports: reports.filter((r) => r.verificationStatus === "verified" && r.locationId === location.id).length
 		};
 	}).sort((a, b) => b.prediction.probability - a.prediction.probability);
 }

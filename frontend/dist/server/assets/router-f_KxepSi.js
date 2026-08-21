@@ -162,7 +162,7 @@ function RootComponent() {
 }
 //#endregion
 //#region src/routes/index.tsx
-var $$splitComponentImporter$2 = () => import("./routes-OmJlUVnw.js");
+var $$splitComponentImporter$2 = () => import("./routes-Bap1-lFo.js");
 var Route$3 = createFileRoute("/")({
 	head: () => ({ meta: [
 		{ title: "Chemichemi — Lake Victoria Fish Kill Early Warning" },
@@ -394,7 +394,7 @@ function AboutPage() {
 }
 //#endregion
 //#region src/routes/intelligence.tsx
-var $$splitComponentImporter$1 = () => import("./intelligence-C6wLVXKF.js");
+var $$splitComponentImporter$1 = () => import("./intelligence-CO8QjGWh.js");
 var Route$1 = createFileRoute("/intelligence")({
 	head: () => ({ meta: [
 		{ title: "Lake Intelligence — Chemichemi Water Quality Platform" },
@@ -423,7 +423,7 @@ var Route$1 = createFileRoute("/intelligence")({
 });
 //#endregion
 //#region src/routes/reports.tsx
-var $$splitComponentImporter = () => import("./reports-C66aauym.js");
+var $$splitComponentImporter = () => import("./reports-DjlStMsX.js");
 var Route = createFileRoute("/reports")({
 	head: () => ({ meta: [
 		{ title: "Community Reports — Chemichemi" },

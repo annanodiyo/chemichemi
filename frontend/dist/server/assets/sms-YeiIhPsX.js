@@ -21,7 +21,7 @@ function validateRiskAlert(data) {
 	};
 }
 function sandboxRecipients() {
-	return (process.env.AFRICASTALKING_SANDBOX_RECIPIENTS ?? "").split(",").map((recipient) => recipient.trim()).filter(Boolean);
+	return (process.env["AFRICASTALKING_SANDBOX_RECIPIENTS"] ?? "").split(",").map((recipient) => recipient.trim()).filter(Boolean);
 }
 /** Sends a test alert to registered Africa's Talking Sandbox simulator numbers. */
 var sendSandboxRiskAlert_createServerFn_handler = createServerRpc({
@@ -30,7 +30,7 @@ var sendSandboxRiskAlert_createServerFn_handler = createServerRpc({
 	filename: "src/lib/sms.ts"
 }, (opts) => sendSandboxRiskAlert.__executeServer(opts));
 var sendSandboxRiskAlert = createServerFn({ method: "POST" }).validator(validateRiskAlert).handler(sendSandboxRiskAlert_createServerFn_handler, async ({ data }) => {
-	const apiKey = process.env.AFRICASTALKING_SANDBOX_API_KEY;
+	const apiKey = process.env["AFRICASTALKING_SANDBOX_API_KEY"];
 	const recipients = sandboxRecipients();
 	if (!apiKey || recipients.length === 0) throw new Error("Africa's Talking Sandbox is not configured. Add its API key and simulator recipients to your environment.");
 	const message = `[Chemichemi SANDBOX] ${data.level} risk at ${data.location}. ${data.advice}`.slice(0, MAX_ALERT_LENGTH);

@@ -1,7 +1,7 @@
 //#region \0%23tanstack-start-server-fn-resolver
 var manifest = { "de338a082dba473e3ef7cc34641b099226871a2ac42936547af81583676d1d68": {
 	functionName: "sendSandboxRiskAlert_createServerFn_handler",
-	importer: () => import("./sms-CVByxb9R.js")
+	importer: () => import("./sms-YeiIhPsX.js")
 } };
 async function getServerFnById(id, access) {
 	const serverFnInfo = manifest[id];
