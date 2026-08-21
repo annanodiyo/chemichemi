@@ -1,1 +1,9 @@
-[installminimumReleaseAge = 86400
+# bunfig.toml — minimal, valid config to guide Bun on Render
+# Prevents Bun from failing to parse or making incorrect assumptions.
+
+[install]
+lockfile = "package-lock.json"  # prefer npm's lockfile
+prefer = "npm"                 # prefer npm for installs on Render
+minimumReleaseAge = 86400       # seconds; keep default release age
+
+# Optional: pin Bun/node behavior or set other bun options here if needed.[installminimumReleaseAge = 86400
