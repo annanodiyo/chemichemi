@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Application struct {
@@ -16,8 +18,7 @@ type Application struct {
 }
 
 func main() {
-	// 1. Initialize user store (reads users.json from project root)
-	userStore, err := store.NewUserStore("users.json")
+	userStore, err := store.NewUserStore(usersFilePath())
 	if err != nil {
 		log.Fatalf("Failed to initialize user store: %v", err)
 	}
@@ -30,19 +31,60 @@ func main() {
 		smsClient: smsClient,
 	}
 
-	// 3. Register HTTP handlers
-	http.HandleFunc("/webhook/sms", app.handleIncomingSMS)
-	http.HandleFunc("/api/trigger-alert", app.handleTriggerAlert)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", app.handleHealth)
+	mux.HandleFunc("/webhook/sms", app.handleIncomingSMS)
+	mux.HandleFunc("/api/trigger-alert", app.handleTriggerAlert)
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
+	server := &http.Server{
+		Addr:              ":" + port,
+		Handler:           withCORS(mux),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 	log.Printf("Server running on port %s...", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+}
+
+func usersFilePath() string {
+	if configuredPath := os.Getenv("USERS_FILE"); configuredPath != "" {
+		return configuredPath
+	}
+	for _, candidate := range []string{"backend/users.json", "users.json"} {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return filepath.Join("backend", "users.json")
+}
+
+func withCORS(next http.Handler) http.Handler {
+	origin := os.Getenv("CORS_ORIGIN")
+	if origin == "" {
+		origin = "http://127.0.0.1:5173"
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *Application) handleHealth(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 func (app *Application) handleIncomingSMS(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +149,7 @@ func (app *Application) handleTriggerAlert(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, 8<<10)
 	var req struct {
 		Message string `json:"message"`
 	}
@@ -130,6 +173,7 @@ func (app *Application) handleTriggerAlert(w http.ResponseWriter, r *http.Reques
 		}
 	}(req.Message)
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte(`{"status":"alert broadcast initiated"}`))
+	_, _ = w.Write([]byte(`{"status":"alert broadcast initiated"}`))
 }

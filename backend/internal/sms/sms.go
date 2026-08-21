@@ -16,13 +16,30 @@ type Client struct {
 }
 
 func NewClient() *Client {
+	apiKey := os.Getenv("AT_APIKEY")
+	username := os.Getenv("AT_USERNAME")
+
+	if apiKey == "" {
+		apiKey = os.Getenv("AFRICASTALKING_SANDBOX_API_KEY")
+	}
+	if username == "" && apiKey != "" {
+		username = "sandbox"
+	}
+
 	return &Client{
-		Username: os.Getenv("AT_USERNAME"),
-		APIKey:   os.Getenv("AT_APIKEY"),
+		Username: username,
+		APIKey:   apiKey,
 	}
 }
 
 func (c *Client) SendSMS(recipient, message string) error {
+	if c.Username == "" || c.APIKey == "" {
+		return fmt.Errorf("Africa's Talking is not configured: set AT_USERNAME and AT_APIKEY, or AFRICASTALKING_SANDBOX_API_KEY")
+	}
+	if strings.TrimSpace(recipient) == "" || strings.TrimSpace(message) == "" {
+		return fmt.Errorf("recipient and message are required")
+	}
+
 	apiURL := "https://api.africastalking.com/version1/messaging"
 	if c.Username == "sandbox" {
 		apiURL = "https://api.sandbox.africastalking.com/version1/messaging"
